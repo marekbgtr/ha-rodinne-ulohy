@@ -1,0 +1,47 @@
+name: Release
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+    branches: [main]
+    paths:
+      - custom_components/family_quests/manifest.json
+      - RELEASE_NOTES.md
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m unittest discover -s tests -q
+      - run: python -m compileall -q custom_components
+      - run: node --check custom_components/family_quests/frontend/family-quests-card.js
+      - run: node tests/frontend_smoke.cjs
+      - name: Package and validate version
+        run: python scripts/package_release.py
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import json; print(json.load(open("custom_components/family_quests/manifest.json"))["version"])')"
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; increase the version for a new release."
+            exit 0
+          fi
+          gh release create "$tag" "dist/Rodinne-ulohy-${version}.zip" --target "$GITHUB_SHA" --title "Rodinné úlohy ${version}" --notes-file RELEASE_NOTES.md

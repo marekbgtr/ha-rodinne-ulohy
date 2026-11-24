@@ -1,0 +1,90 @@
+/* Card logic tests with a minimal DOM substitute; not a browser/layout test. */
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+let Registered;
+class Element { attachShadow(){this.shadowRoot={innerHTML:'',addEventListener(){},querySelectorAll(){return[];}};} }
+const context={HTMLElement:Element,customElements:{get(){return false;},define(n,c){Registered=c;}},window:{customCards:[],confirm(){return true;}},console,setInterval,clearInterval,Date,Math,FormData:class {constructor(form){this.data=form;}get(n){return this.data[n]??null;}has(n){return n in this.data;}getAll(n){return this.data[n]||[];}}};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync(__dirname+'/../custom_components/family_quests/frontend/family-quests-card.js','utf8'),context);
+const today=new Date().toISOString().slice(0,10);
+const data={version:1,admin:true,today,now:new Date().toISOString(),people:[{id:'a',name:'Maty',symbol:'⭐',unit:'Hviezdičky',balance:2,week_completed:1,week_net:2,active:true,avatar:'',goal:''},{id:'b',name:'Momo',symbol:'❤️',unit:'Srdiečka',balance:1,week_completed:1,week_net:1,active:true,avatar:'',goal:''}],tasks:[],rewards:[],occurrences:[],requests:[],history:[],notices:[]};
+(async()=>{
+ const card=new Registered();card.setConfig({mode:'child'});
+ const calls=[];card._hass={states:{},callWS:async msg=>{calls.push(msg);return structuredClone(data);}};
+ await card.refresh();assert(card.shadowRoot.innerHTML.includes('Maty'));
+ function click(action,rest={}){card.click({target:{closest(){return{disabled:false,dataset:{action,...rest}};}}});}
+ click('person',{id:'b'});assert(card.shadowRoot.innerHTML.includes('Srdiečka'));
+ click('symbols',{pid:'b'});assert(card.shadowRoot.innerHTML.includes('Čo chceš zbierať?'));
+ await card.submit({preventDefault(){},target:{symbol:'🐴',unit:'Koníky'}});
+ assert.equal(calls.at(-1).action,'set_symbol');assert.equal(calls.at(-1).data.person,'b');
+ card.setConfig({mode:'admin'});card._data=structuredClone(data);card.render();
+ click('edit-task');assert(card.shadowRoot.innerHTML.includes('Rozšírené nastavenia'));
+ await card.submit({preventDefault(){},target:{name:'Smeti',icon:'✓',group:'',mode:'first',frequency:'daily',date:today,due:'19:45',cutoff:'22:00',everyone:'yes',active:'yes',points:'2',late_points:'1',penalty:'0',days:['0','1'],people:[]}});
+ assert.equal(calls.at(-1).action,'save_task');assert.equal(calls.at(-1).data.points,2);assert.equal(calls.at(-1).data.mode,'first');
+
+ card._data.rewards=[{id:'r',name:'Rozprávka',kind:'task_points',cost:3,task:'t',on_time:false,active:true,icon:'📖'}];
+ const member={award:null,submitted:new Date().toISOString(),exempt:false};
+ card._data.occurrences=[{id:'t:'+today,task:{name:'Pyžamo'},due:new Date(Date.now()+10000).toISOString(),members:{a:member}}];
+ let html=card.rewardList(card._data.people[0],false);
+ assert(html.includes('3 ⭐ + Splnená úloha: Pyžamo'));assert(html.includes('Najprv splň úlohu'));
+ member.award='earned';html=card.rewardList(card._data.people[0],false);assert(html.includes('Chýbajú body'));
+ card._data.people[0].balance=3;html=card.rewardList(card._data.people[0],false);assert(html.includes('Chcem odmenu'));
+ click('edit-reward',{id:'r'});assert(card.shadowRoot.innerHTML.includes('Body + splnená úloha'));
+ await card.submit({preventDefault(){},target:{name:'Rozprávka',icon:'📖',kind:'task_points',cost:'3',task:'t',active:'yes'}});
+ assert.equal(calls.at(-1).data.kind,'task_points');assert.equal(calls.at(-1).data.cost,3);assert.equal(calls.at(-1).data.task,'t');
+
+ const statsWeek={start:today,end:today,current:true,assigned:2,completed:1,on_time:1,late:0,waiting:0,open:1,missed:0,exempt:0,earned:2,bonus:0,penalties:0,spent:0,net:2,rate:50,perfect_days:0,summary:'Skúšobný týždeň',days:Array.from({length:7},(_,i)=>({date:today,future:false,assigned:i===0?2:0,completed:i===0?1:0})),groups:[{name:'Večer',assigned:2,completed:1}],badges:[{icon:'🌱',label:'Prvý krok'}]};
+ card._data.statistics={a:Array.from({length:8},()=>structuredClone(statsWeek))};
+ card.setConfig({mode:'stats',person:'Maty'});card.render();
+ assert(card.shadowRoot.innerHTML.includes('Týždeň po dňoch'));assert(card.shadowRoot.innerHTML.includes('50%'));assert(card.shadowRoot.innerHTML.includes('Prvý krok'));
+ click('week',{step:'1'});assert.equal(card._week,1);click('week',{step:'-1'});assert.equal(card._week,0);
+ card.setConfig({mode:'admin'});card._data.group_order=['Ráno','Večer'];click('tab',{tab:'settings'});
+ assert(card.shadowRoot.innerHTML.includes('Poradie skupín úloh'));
+ click('group-move',{index:'1',step:'-1'});await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls.at(-1).action,'set_group_order');assert.equal(calls.at(-1).data.groups.join(','),'Večer,Ráno');
+ click('reset-editor');assert(card.shadowRoot.innerHTML.includes('VYMAZAT HISTORIU'));assert(card.shadowRoot.innerHTML.includes('backup_confirmed'));
+ await card.submit({preventDefault(){},target:{start:'tomorrow',confirmation:'VYMAZAT HISTORIU',backup_confirmed:'yes'}});
+ assert.equal(calls.at(-1).action,'reset_progress');assert.equal(calls.at(-1).data.backup_confirmed,true);
+ card._data=structuredClone(data);
+ card._data.occurrences=[{id:'t:ongoing',day:'2026-01-01',current:true,due:null,cutoff:null,task:{id:'t',name:'Projekt',frequency:'ongoing',icon:'✓',points:3,late_points:0,mode:'independent'},members:{a:{submitted:null,award:null,exempt:false}}}];
+ card.setConfig({mode:'child',person:'Maty'});card._tab='today';card.render();
+ assert(card.shadowRoot.innerHTML.includes('Bez termínu'));assert(card.shadowRoot.innerHTML.includes('Projekt'));assert(card.shadowRoot.innerHTML.includes('data-action="complete"'));
+ card._data.occurrences[0].task.frequency='weekly';card.render();assert(card.shadowRoot.innerHTML.includes('do nedele'));
+ card.setConfig({mode:'admin'});
+ card._tab='today';
+ card._data.admin=false;card.render();assert(card.shadowRoot.innerHTML.includes('iba správcovi'));assert(!card.shadowRoot.innerHTML.includes('data-action="adjust"'));
+ card._data.people[0].name='<img src=x onerror=alert(1)>';card.setConfig({mode:'child'});card.render();assert(!card.shadowRoot.innerHTML.includes('<img src=x'));assert(card.shadowRoot.innerHTML.includes('&lt;img'));
+ card._editor=null;card._data=structuredClone(data);card.setConfig({mode:'child',person:'Maty'});card._tab='today';card.render();
+ assert(!card.shadowRoot.innerHTML.includes('Môj týždeň'));assert(!card.shadowRoot.innerHTML.includes('čistá zmena'));
+ card._data.people[0].show_statistics=true;card.render();assert(card.shadowRoot.innerHTML.includes('Môj týždeň'));
+ const sample={id:'task:today',day:today,current:true,due:new Date(Date.now()-60000).toISOString(),cutoff:new Date(Date.now()+3600000).toISOString(),task:{name:'Stôl',frequency:'daily',icon:'✓',points:2,late_points:1,mode:'independent'},members:{a:{submitted:null,award:null,exempt:false}}};
+ card._data.occurrences=[sample];card._data.people[0].symbol='💖';card.render();
+ assert(card.shadowRoot.innerHTML.includes('<svg'));assert(card.shadowRoot.innerHTML.includes('M12 21'));assert(!card.shadowRoot.innerHTML.includes('>☆<'));
+ sample.members.a.submitted=new Date().toISOString();sample.members.a.award='x';sample.members.a.full_points=true;card.render();
+ assert(card.shadowRoot.innerHTML.includes('Plné body uznal rodič'));assert(card.shadowRoot.innerHTML.includes('fill="currentColor"'));
+ card.setConfig({mode:'admin'});sample.members.a.award=null;sample.members.a.submitted=null;sample.members.a.full_points=false;sample.members.a.exempt=true;card.render();
+ assert(card.shadowRoot.innerHTML.includes('Zrušiť ospravedlnenie'));
+ click('unexempt',{oid:sample.id,pid:'a'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'unexempt');
+ card._data.occurrences=[sample];sample.members.a.exempt=false;card.render();assert(card.shadowRoot.innerHTML.includes('Uznať za plné body'));
+ click('approve_full',{oid:sample.id,pid:'a'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'approve_full');
+ sample.task.frequency='repeat';sample.task.repeat_limit=4;sample.task.repeat_goal=3;sample.members.a.attempts=[{id:'attempt1',submitted:new Date().toISOString(),award:'points',confirmed:true},{id:'attempt2',submitted:new Date().toISOString(),award:null,confirmed:false}];
+ card._data.occurrences=[sample];card.render();assert(card.shadowRoot.innerHTML.includes('Dnes splnené 1×'));assert(card.shadowRoot.innerHTML.includes('data-attempt="attempt2"'));
+ click('approve',{oid:sample.id,pid:'a',attempt:'attempt2'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).data.attempt,'attempt2');
+ card.setConfig({mode:'admin'});click('tab',{tab:'settings'});assert(card.shadowRoot.innerHTML.includes('Štatistiky na detskej karte'));
+ click('statistics-toggle',{pid:'a'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'set_statistics');assert.equal(calls.at(-1).data.enabled,true);
+
+
+ card._editor=null;card._data=structuredClone(data);card._data.people[0].balance=9;
+ card._data.rewards=[{id:'poolreward',name:'Spoločný výlet',kind:'points',shared:true,cost:10,icon:'🎁',active:true}];
+ card._data.requests=[{id:'poolreq',person:'b',shared:true,reward:card._data.rewards[0],status:'funding',funded:4,contributors:{b:4}}];
+ card.setConfig({mode:'child',person:'Maty'});card._tab='rewards';card.render();
+ assert(card.shadowRoot.innerHTML.includes('4 / 10 bodov'));assert(card.shadowRoot.innerHTML.includes('Momo: 4'));
+ click('contribute',{id:'poolreward',pid:'a'});assert(card.shadowRoot.innerHTML.includes('Prispieť na spoločnú odmenu'));
+ await card.submit({preventDefault(){},target:{amount:'6'}});assert.equal(calls.at(-1).action,'contribute_reward');assert.equal(calls.at(-1).data.amount,6);
+ click('withdraw',{id:'poolreq',pid:'a'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'withdraw_contribution');
+ card.setConfig({mode:'admin'});click('edit-reward');assert(card.shadowRoot.innerHTML.includes('Spoločná odmena – účastníci sa skladajú bodmi'));
+ await card.submit({preventDefault(){},target:{name:'Výlet',icon:'🎁',kind:'points',cost:'10',active:'yes',shared:'yes'}});assert.equal(calls.at(-1).data.shared,true);
+
+ const offline=new Registered();offline.setConfig({mode:'child'});offline._hass={callWS:async()=>{throw Error('Offline');}};await offline.refresh();offline.click({target:{closest(){return {disabled:false,dataset:{action:'refresh'}};}}});
+ await new Promise(resolve=>setImmediate(resolve));assert(offline.shadowRoot.innerHTML.includes('Offline'));
+ console.log('PASS: card render/navigation, symbol submission, task form numeric conversion, admin gate, escaping and refresh before data. DOM substitute only.');
+})().catch(e=>{console.error(e);process.exit(1);});

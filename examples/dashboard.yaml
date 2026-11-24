@@ -1,0 +1,14 @@
+title: Rodinné úlohy
+views:
+  - title: Deti
+    path: deti
+    icon: mdi:star-outline
+    cards:
+      - type: custom:family-quests-card
+        mode: child
+  - title: Rodičia
+    path: rodicia
+    icon: mdi:account-cog
+    cards:
+      - type: custom:family-quests-card
+        mode: admin

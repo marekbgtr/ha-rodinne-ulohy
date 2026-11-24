@@ -1,0 +1,8 @@
+type: vertical-stack
+cards:
+  - type: custom:family-quests-card
+    mode: stats
+    person: Maty
+  - type: custom:family-quests-card
+    mode: stats
+    person: Momo

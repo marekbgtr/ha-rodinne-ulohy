@@ -1,0 +1,17 @@
+# Vložte ako jednu automatizáciu do editora YAML.
+# Pred uložením vymeňte notify.mobile_app_tvoj_mobil za akciu svojho telefónu.
+alias: Rodinné úlohy – žiadosť o odmenu
+triggers:
+  - trigger: event
+    event_type: family_quests_reward_requested
+conditions: []
+actions:
+  - action: notify.mobile_app_tvoj_mobil
+    data:
+      title: "🎁 Žiadosť o odmenu"
+      message: >-
+        {{ trigger.event.data.person_name }} žiada o odmenu:
+        {{ trigger.event.data.reward_name }}
+        ({{ trigger.event.data.cost }} {{ trigger.event.data.symbol }}).
+mode: queued
+max: 20

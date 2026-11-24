@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "version": 0,
+  "people": {
+    "17e186ae81094497bb3703d6e6e83733": {
+      "id": "17e186ae81094497bb3703d6e6e83733",
+      "name": "Maty",
+      "symbol": "⭐",
+      "unit": "Hviezdičky",
+      "avatar": "",
+      "active": true,
+      "goal": ""
+    }
+  },
+  "tasks": {
+    "f768d6fa475648eba23bb7b6dbe788f4": {
+      "id": "f768d6fa475648eba23bb7b6dbe788f4",
+      "name": "Pyžamo",
+      "icon": "✓",
+      "group": "",
+      "mode": "independent",
+      "frequency": "daily",
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "people": [],
+      "everyone": true,
+      "due": "19:45",
+      "cutoff": "22:00",
+      "date": "2026-11-21",
+      "points": 1,
+      "late_points": 0,
+      "penalty": 0,
+      "approval": false,
+      "split": false,
+      "active": true,
+      "start": "2026-11-21"
+    }
+  },
+  "rewards": {},
+  "occurrences": {
+    "f768d6fa475648eba23bb7b6dbe788f4:2026-11-21": {
+      "id": "f768d6fa475648eba23bb7b6dbe788f4:2026-11-21",
+      "day": "2026-11-21",
+      "task": {
+        "id": "f768d6fa475648eba23bb7b6dbe788f4",
+        "name": "Pyžamo",
+        "icon": "✓",
+        "group": "",
+        "mode": "independent",
+        "frequency": "daily",
+        "days": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "people": [],
+        "everyone": true,
+        "due": "19:45",
+        "cutoff": "22:00",
+        "date": "2026-11-21",
+        "points": 1,
+        "late_points": 0,
+        "penalty": 0,
+        "approval": false,
+        "split": false,
+        "active": true,
+        "start": "2026-11-21"
+      },
+      "members": {
+        "17e186ae81094497bb3703d6e6e83733": {
+          "submitted": "2026-11-21T18:00:00+01:00",
+          "confirmed": true,
+          "exempt": false,
+          "exempt_reason": "",
+          "award": "0caff353a67c40769d59642066c27348",
+          "penalty": null
+        }
+      },
+      "winner": null,
+      "group_award": null,
+      "due": "2026-11-21T19:45:00+01:00",
+      "cutoff": "2026-11-21T22:00:00+01:00"
+    }
+  },
+  "ledger": [
+    {
+      "id": "0caff353a67c40769d59642066c27348",
+      "at": "2026-11-21T18:00:00+01:00",
+      "day": "2026-11-21",
+      "deltas": {
+        "17e186ae81094497bb3703d6e6e83733": 1
+      },
+      "reason": "Splnené: Pyžamo",
+      "kind": "task",
+      "ref": "f768d6fa475648eba23bb7b6dbe788f4:2026-11-21",
+      "actor": "child",
+      "reversed_by": null
+    }
+  ],
+  "requests": {},
+  "last_day": null,
+  "request_ids": [],
+  "notices": []
+}
