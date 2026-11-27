@@ -103,6 +103,8 @@ class Engine:
     def scheduled(self, task, day):
         if not task["active"] or day < date.fromisoformat(task["start"]):
             return False
+        if task["frequency"] == "weekend":
+            return day.weekday() >= 4
         if task["frequency"] == "once":
             return day.isoformat() <= task["date"]
         return task["frequency"] not in ("daily", "repeat") or day.weekday() in task["days"]
@@ -134,11 +136,13 @@ class Engine:
             return
         frequency = task["frequency"]
         period = day
-        if frequency == "weekly":
+        if frequency == "weekend":
+            period = day - timedelta(days=day.weekday() - 4)
+        elif frequency == "weekly":
             period = day - timedelta(days=day.weekday())
         elif frequency == "once":
             period = date.fromisoformat(task["date"])
-        oid = task["id"] + ":" + ("ongoing" if frequency == "ongoing" else ("week:" if frequency == "weekly" else "") + period.isoformat())
+        oid = task["id"] + ":" + ("ongoing" if frequency == "ongoing" else ("week:" if frequency == "weekly" else "weekend:" if frequency == "weekend" else "") + period.isoformat())
         if oid in self.s["occurrences"]:
             return
         if self.s.get("tracking_start") and day.isoformat() < self.s["tracking_start"]:
@@ -146,6 +150,10 @@ class Engine:
         due = cutoff = None
         if frequency == "repeat":
             due = cutoff = datetime.combine(period + timedelta(days=1), time.min, self.zone)
+        elif frequency == "weekend":
+            end = period + timedelta(days=2)
+            due = datetime.combine(end, clock(task["due"]), self.zone)
+            cutoff = datetime.combine(end, clock(task["cutoff"]), self.zone)
         elif frequency == "weekly":
             due = cutoff = datetime.combine(period + timedelta(days=7), time.min, self.zone)
         elif frequency != "ongoing":
@@ -156,7 +164,7 @@ class Engine:
         people = self.selected(task)
         if task["mode"] == "rotation" and people:
             start = date.fromisoformat(task["start"])
-            if frequency == "weekly":
+            if frequency in ("weekly", "weekend"):
                 turns = (period - (start - timedelta(days=start.weekday()))).days // 7
             else:
                 turns = sum((start + timedelta(days=i)).weekday() in task["days"] for i in range((day-start).days))
@@ -167,7 +175,7 @@ class Engine:
                        "exempt_reason": "", "award": None, "penalty": None} for p in people}
         self.s["occurrences"][oid] = {
             "id": oid, "day": period.isoformat(), "task": deepcopy(task), "members": members,
-            "available_from": max(task["start"], self.s.get("tracking_start") or task["start"], period.isoformat() if frequency == "weekly" else task["start"]),
+            "available_from": max(task["start"], self.s.get("tracking_start") or task["start"], period.isoformat() if frequency in ("weekly", "weekend") else task["start"]),
             "winner": None, "group_award": None,
             "due": due.isoformat() if due else None,
             "cutoff": cutoff.isoformat() if cutoff else None,
@@ -448,7 +456,7 @@ class Engine:
         mode = args.get("mode", "independent")
         require(mode in ("independent", "first", "together", "rotation"), "Neplatný režim.")
         frequency = args.get("frequency", "daily")
-        require(frequency in ("daily", "once", "weekly", "ongoing", "repeat"), "Neplatné opakovanie.")
+        require(frequency in ("daily", "once", "weekly", "weekend", "ongoing", "repeat"), "Neplatné opakovanie.")
         days = args.get("days", list(range(7)))
         require(isinstance(days, list) and (bool(days) or frequency not in ("daily", "repeat")) and all(type(d) is int and 0 <= d <= 6 for d in days), "Vyber dni v týždni.")
         people = args.get("people", [])
@@ -610,6 +618,23 @@ class Engine:
         else:
             req["status"] = "approved"
 
+    def return_reward(self, args, now, actor):
+        req = self.s["requests"].get(args["request"])
+        require(req is not None, "Žiadosť neexistuje.")
+        if req["status"] == "returned":
+            return
+        require(req["status"] == "approved", "Vrátiť možno iba potvrdenú odmenu.")
+        if req.get("shared"):
+            for item in req["contributions"]:
+                if not item.get("withdrawn"):
+                    self.reverse(item["debit"], now, "Vrátená odmena: " + req["reward"]["name"], actor)
+                    item["withdrawn"] = now.isoformat()
+        else:
+            self.reverse(req["debit"], now, "Vrátená odmena: " + req["reward"]["name"], actor)
+        req["status"] = "returned"
+        req["returned_at"] = now.isoformat()
+        req["returned_by"] = actor
+
     def adjust(self, args, now, actor):
         pid = args["person"]
         self.person(pid)
@@ -757,7 +782,7 @@ class Engine:
         return result
 
     def apply(self, action, args, now, actor, admin):
-        allowed = PUBLIC_ACTIONS | {"unexempt", "approve_full", "set_statistics", "save_person", "save_task", "save_reward", "approve", "undo", "exempt", "adjust", "reverse_adjustment", "decide_reward", "set_group_order", "reset_progress"}
+        allowed = PUBLIC_ACTIONS | {"return_reward", "unexempt", "approve_full", "set_statistics", "save_person", "save_task", "save_reward", "approve", "undo", "exempt", "adjust", "reverse_adjustment", "decide_reward", "set_group_order", "reset_progress"}
         require(action in allowed, "Neznáma akcia.")
         require(admin or action in PUBLIC_ACTIONS, "Táto akcia je iba pre správcu Home Assistanta.")
         getattr(self, action)(args, now, actor)
@@ -784,7 +809,7 @@ class Engine:
                             any(m["submitted"] and not m["confirmed"] for m in o["members"].values())))]
         requests = list(self.s["requests"].values())
         recent_ids = {r["id"] for r in requests[-100:]}
-        requests = [deepcopy(r) for r in requests if r["id"] in recent_ids or r["status"] in ("pending", "funding")]
+        requests = [deepcopy(r) for r in requests if r["id"] in recent_ids or r["status"] in ("pending", "funding") or (admin and r["status"] == "approved")]
         for req in requests:
             if req.get("shared"):
                 req["contributors"] = self.contributions(req)

@@ -10,7 +10,7 @@ import sys
 import types
 import unittest
 from datetime import datetime
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, AsyncMock
 
 ROOT=Path(__file__).resolve().parents[1]/'custom_components/family_quests'
 
@@ -43,7 +43,7 @@ NOW=datetime.fromisoformat('2026-11-17T18:00:00+01:00')
 
 class TransactionTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        hass=types.SimpleNamespace(config=types.SimpleNamespace(time_zone='Europe/Bratislava'), bus=types.SimpleNamespace(async_fire=Mock()))
+        hass=types.SimpleNamespace(services=types.SimpleNamespace(async_call=AsyncMock()), config=types.SimpleNamespace(time_zone='Europe/Bratislava'), bus=types.SimpleNamespace(async_fire=Mock()))
         entry=types.SimpleNamespace(entry_id='test',data={})
         self.c=Controller(hass,entry)
         e=self.c.engine

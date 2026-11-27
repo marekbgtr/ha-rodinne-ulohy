@@ -35,6 +35,7 @@ class Controller:
         self.engine.tick(now)
         self.engine.s["version"] += 1
         await self.store.async_save(self.engine.s)
+        await self.update_notification(self.pending_tasks(self.engine.s))
 
     async def transact(self, action=None, data=None, actor="system", admin=False,
                        request_id=None, expected_version=None, now=None):
@@ -86,7 +87,47 @@ class Controller:
                     except Exception:
                         # A notification failure must not undo an already saved request.
                         _LOGGER.exception("Žiadosť je uložená, ale udalosť upozornenia zlyhala")
+                previous = self.pending_tasks(before)
+                pending = self.pending_tasks(self.engine.s)
+                for key, payload in pending.items():
+                    if key not in previous:
+                        try:
+                            self.hass.bus.async_fire("family_quests_task_approval_requested", payload)
+                        except Exception:
+                            _LOGGER.exception("Splnenie je uložené, ale udalosť upozornenia zlyhala")
+                await self.update_notification(pending)
             return self.engine.snapshot(now, admin)
+
+    def pending_tasks(self, state):
+        pending = {}
+        for oid, occ in state["occurrences"].items():
+            for pid, member in occ["members"].items():
+                if member["exempt"]:
+                    continue
+                records = member.get("attempts", []) if occ["task"]["frequency"] == "repeat" else [member]
+                for record in records:
+                    if record.get("voided") or not record.get("submitted") or record["confirmed"]:
+                        continue
+                    attempt = record.get("id", "")
+                    key = (oid, pid, attempt, record["submitted"])
+                    pending[key] = {"config_entry_id": self.entry.entry_id,
+                        "occurrence_id": oid, "person_id": pid,
+                        "person_name": state["people"][pid]["name"],
+                        "task_id": occ["task"]["id"], "task_name": occ["task"]["name"],
+                        "attempt_id": attempt, "submitted_at": record["submitted"]}
+        return pending
+
+    async def update_notification(self, pending):
+        # One durable HA notification for this household; no phone service assumed.
+        lines = [p["person_name"] + " – " + p["task_name"] for p in pending.values()]
+        lines += ["Odmena: " + r["reward"]["name"] for r in self.engine.s["requests"].values() if r["status"] == "pending"]
+        data = {"notification_id": "family_quests_" + self.entry.entry_id}
+        if lines:
+            data.update(title="Rodinné úlohy – čaká na rodiča", message="\n".join("- " + line for line in lines) + "\n\nOtvorte rodinný dashboard a vybavte žiadosti.")
+        try:
+            await self.hass.services.async_call("persistent_notification", "create" if lines else "dismiss", data, blocking=True)
+        except Exception:
+            _LOGGER.exception("Zmeny sú uložené, ale upozornenie HA sa nepodarilo aktualizovať")
 
     async def tick(self, _now):
         try:

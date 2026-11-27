@@ -1,0 +1,25 @@
+# Jedna automatizácia do editora YAML v HA.
+# Nahraď notify.mobile_app_tvoj_mobil akciou svojho mobilu.
+# Ak už máš starú automatizáciu odmien, nahraď ju touto (inak prídu dve správy).
+alias: Rodinné úlohy – upozornenia pre rodiča
+triggers:
+  - trigger: event
+    event_type: family_quests_reward_requested
+    id: reward
+  - trigger: event
+    event_type: family_quests_task_approval_requested
+    id: task
+conditions: []
+actions:
+  - action: notify.mobile_app_tvoj_mobil
+    data:
+      title: >-
+        {{ 'Žiadosť o odmenu' if trigger.id == 'reward' else 'Úloha čaká na schválenie' }}
+      message: >-
+        {% if trigger.id == 'reward' %}
+          {{ trigger.event.data.person_name }} žiada o odmenu: {{ trigger.event.data.reward_name }}.
+        {% else %}
+          {{ trigger.event.data.person_name }} dokončil(a): {{ trigger.event.data.task_name }}.
+        {% endif %}
+mode: queued
+max: 20

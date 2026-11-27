@@ -1,4 +1,4 @@
-/* Rodinné úlohy 0.5.0 — dependency-free Lovelace card. */
+/* Rodinné úlohy 0.6.0 — dependency-free Lovelace card. */
 (function () {
   "use strict";
   var esc = function (v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -118,7 +118,7 @@
         var pool = Math.min.apply(null, eligible.map(id => (occ.members[id].full_points || !occ.due || Date.parse(occ.members[id].submitted) <= Date.parse(occ.due)) ? occ.task.points : occ.task.late_points));
         shownPoints = Math.floor(pool / eligible.length) + (eligible.indexOf(pid) < pool % eligible.length ? 1 : 0);
       }
-      var deadline = occ.task.frequency === 'weekly' ? 'Tento týždeň · do nedele' : occ.task.frequency === 'ongoing' ? 'Bez termínu' : (occ.task.frequency === 'once' ? 'Do ' + occ.task.date + ' · ' : 'do ') + occ.task.due;
+      var deadline = occ.task.frequency === 'weekend' ? 'Víkend · do nedele ' + occ.task.due : occ.task.frequency === 'weekly' ? 'Tento týždeň · do nedele' : occ.task.frequency === 'ongoing' ? 'Bez termínu' : (occ.task.frequency === 'once' ? 'Do ' + occ.task.date + ' · ' : 'do ') + occ.task.due;
       var details = esc(deadline) + ' · ' + shownPoints + ' ' + esc(p.symbol);
       if (status !== "open") details = labels[status] + ' · ' + details;
       if (m.full_points) details += ' · Plné body uznal rodič';
@@ -132,6 +132,10 @@
         else if (!m.exempt && status !== "other") controls += button('Ospravedlniť', 'exempt', data, 'quiet');
       } else if (status === "open") controls = button(tokenIcon(p.symbol,false), 'complete', data + ' aria-label="' + esc('Splniť: ' + occ.task.name) + '"', 'star');
       else controls = '<span class="status-icon" aria-label="' + esc(labels[status]) + '">' + (status === "done" ? tokenIcon(p.symbol,true) : stateIcon(status)) + '</span>';
+      if (!admin && this._data.admin) {
+        if (status === 'approval') controls += button('Schváliť','approve',data,'positive');
+        if (!m.exempt && status !== 'other' && !m.full_points && (late || status === 'missed')) controls += button('Uznať za plné body','approve_full',data,'positive');
+      }
       return '<div class="task ' + status + '"><span class="task-icon">' + esc(occ.task.icon) + '</span><div class="grow"><h3>' + esc(occ.task.name) + '</h3><div class="muted">' + details + '</div>' + (admin && m.exempt ? '<small>' + esc(m.exempt_reason) + '</small>' : '') + '</div><div class="actions">' + controls + '</div></div>';
     }
     repeatRow(occ,pid,admin) {
@@ -155,7 +159,7 @@
       } else if(ready)controls=button(tokenIcon(p.symbol,false),'complete',data+' aria-label="Zaznamenať ďalšie splnenie: '+esc(occ.task.name)+'"','star');
       else controls='<span class="status-icon">'+(m.exempt?stateIcon('exempt'):done?tokenIcon(p.symbol,true):stateIcon('missed'))+'</span>';
       var history='';
-      if(admin&&records.length)history='<details><summary>Jednotlivé splnenia ('+records.length+')</summary>'+records.map(r=>{
+      if((admin||this._data.admin)&&records.length)history='<details><summary>Jednotlivé splnenia ('+records.length+')</summary>'+records.map(r=>{
         var attrs=data+' '+attr('attempt',r.id);
         return '<div class="attempt"><span>'+esc(new Date(r.submitted).toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit',timeZone:this._data.timezone||'Europe/Bratislava'}))+' · '+(r.award?'Schválené':'Čaká na rodiča')+'</span><div class="actions">'+(!r.award&&!m.exempt?button('Schváliť','approve',attrs,'positive'):'')+button('Vrátiť','undo',attrs,'quiet')+'</div></div>';
       }).join('')+'</details>';
@@ -269,9 +273,9 @@
       if (this._tab === 'settings') return result + this.settings();
       if (this._tab === 'stats') return result + this.statistics(p);
       if (this._tab === 'people') return result + button('+ Pridať účastníka','edit-person','', 'primary') + this._data.people.map(x => '<div class="task"><div class="grow"><h3>' + esc(x.name) + ' ' + esc(x.symbol) + '</h3><small>' + (x.active?'Aktívny':'Neaktívny') + ' · ' + x.balance + ' bodov</small></div>' + button('Upraviť','edit-person',attr('id',x.id)) + '</div>').join('');
-      if (this._tab === 'tasks') return result + button('+ Nová úloha','edit-task','', 'primary') + this._data.tasks.map(t => '<div class="task"><span class="task-icon">' + esc(t.icon) + '</span><div class="grow"><h3>' + esc(t.name) + '</h3><small>' + esc(modes[t.mode]) + ' · ' + esc(({repeat:'Viackrát za deň',weekly:'Raz za týždeň',ongoing:'Bez termínu',once:'Do ' + t.date,daily:t.due})[t.frequency]) + ' · ' + (t.active?'Aktívna':'Neaktívna') + '</small></div>' + button('Upraviť','edit-task',attr('id',t.id)) + '</div>').join('');
+      if (this._tab === 'tasks') return result + button('+ Nová úloha','edit-task','', 'primary') + this._data.tasks.map(t => '<div class="task"><span class="task-icon">' + esc(t.icon) + '</span><div class="grow"><h3>' + esc(t.name) + '</h3><small>' + esc(modes[t.mode]) + ' · ' + esc(({repeat:'Viackrát za deň',weekend:'Raz za víkend',weekly:'Raz za týždeň',ongoing:'Bez termínu',once:'Do ' + t.date,daily:t.due})[t.frequency]) + ' · ' + (t.active?'Aktívna':'Neaktívna') + '</small></div>' + button('Upraviť','edit-task',attr('id',t.id)) + '</div>').join('');
       if (!p) return result + '<div class="empty">Začni pridaním účastníka.</div>';
-      if (this._tab === 'rewards') return result + this.rewardList(p,true);
+      if (this._tab === 'rewards') return result + this.rewardList(p,true) + this.approvedRewards();
       if (this._tab === 'history') return result + '<p class="hint">Posledných 100 bodových udalostí domácnosti. Úplná história zostáva uložená v HA.</p>' + this._data.history.filter(e => Object.prototype.hasOwnProperty.call(e.deltas,p.id)).map(e => '<div class="history"><div class="grow"><b>' + esc(e.reason) + '</b><small>' + esc(new Date(e.at).toLocaleString('sk-SK')) + (e.reversed_by ? ' · vrátené' : '') + '</small></div><strong>' + (e.deltas[p.id]>=0?'+':'') + e.deltas[p.id] + ' ' + esc(p.symbol) + '</strong>' + (e.kind==='manual'&&!e.reversed_by ? button('↶','reverse-adjustment',attr('id',e.id),'quiet') : '') + '</div>').join('');
       result += '<div class="adjust">' + [-10,-2,-1,1,2,10].map(n => button((n>0?'+':'')+n,'adjust',attr('pid',p.id)+' '+attr('delta',n),n>0?'positive':'negative')).join('') + '</div>';
       result += button('Iná suma / dôvod','edit-adjust',attr('pid',p.id),'quiet');
@@ -281,6 +285,10 @@
       var rows = this._data.occurrences.filter(o=>o.members[p.id]).sort((a,b)=>b.day.localeCompare(a.day));
       result += rows.map(o=>this.taskRow(o,p.id,true)).join('') || '<div class="empty">Žiadne úlohy. Pridaj ich v záložke Úlohy.</div>';
       return result;
+    }
+    approvedRewards() {
+      var rows=this._data.requests.filter(q=>q.status==='approved').slice().reverse();
+      return '<h4>Potvrdené odmeny</h4>' + (rows.map(q=>'<div class="task"><div class="grow"><h3>'+esc(q.reward.name)+'</h3><small>'+esc(q.shared?this.contributorNames(q):(this.person(q.person)||{}).name)+' · '+esc(new Date(q.at).toLocaleString('sk-SK'))+'</small></div>'+button('Vrátiť odmenu','return-reward',attr('id',q.id),'quiet')+'</div>').join('') || '<p class="hint">Žiadne potvrdené odmeny v posledných žiadostiach.</p>');
     }
     editor() {
       var ed=this._editor, v=ed.value || {}, type=ed.type, body='', title='';
@@ -295,7 +303,7 @@
         body=field('Symbol','symbol',v.symbol,'text','required list="symbols" maxlength="16"') + field('Názov','unit',v.unit,'text','required maxlength="40"') + '<p class="hint">Napríklad ❤️ Srdiečka, 🐴 Koníky alebo ⭐ Hviezdičky. Počet bodov zostane rovnaký.</p>';
       } else if(type==='task') {
         title=v.id?'Upraviť úlohu':'Nová úloha';
-        body=field('Názov','name',v.name||'','text','required maxlength="100"') + field('Ikona (emoji)','icon',v.icon||'✓','text','required maxlength="16"') + select('Spôsob plnenia','mode',v.mode||'independent',modes) + check('Všetci aktívni účastníci','everyone',v.everyone!==false) + '<div class="checks">' + this._data.people.map(p=>check(p.name,'people',(v.people||[]).indexOf(p.id)>=0,p.id)).join('') + '</div><small>Výber jednotlivcov platí po vypnutí „Všetci“.</small>' + select('Opakovanie','frequency',v.frequency||'daily',{daily:'Vybrané dni v týždni',repeat:'Viackrát za deň',weekly:'Raz za týždeň (ľubovoľný deň)',once:'Dlhodobá / jednorazová do dátumu',ongoing:'Bez termínu (jednorazovo)'}) + '<div class="checks">' + days.map((d,i)=>check(d,'days',(v.days||[0,1,2,3,4,5,6]).indexOf(i)>=0,i)).join('') + '</div>' + '<p class="hint">Dni a časy platia pre denné úlohy. Týždenná úloha trvá od pondelka do nedele, bez oneskorených bodov. Bez termínu zostáva otvorená do splnenia, bez postihu. Dátum a časy pri dlhodobej úlohe určujú jej koniec; dostupná je ihneď.</p>' + '<details><summary>Viackrát za deň – nastavenia</summary><p class="hint">Plnenie počas celého dňa vo vybrané dni. Body za každé splnenie; iba Každý samostatne alebo Na striedačku. Denné časy sa ignorujú. Postih sa vyhodnotí raz po polnoci, iba ak nie je splnený cieľ.</p>' + field('Denný limit (0 = bez limitu)','repeat_limit',v.repeat_limit==null?4:v.repeat_limit,'number','min="0" max="100"') + field('Denný cieľ (0 = dobrovoľná úloha)','repeat_goal',v.repeat_goal||0,'number','min="0" max="100"') + field('Odstup splnení v minútach','repeat_gap',v.repeat_gap==null?5:v.repeat_gap,'number','min="0" max="1440"') + '</details>' + field('Konečný dátum dlhodobej úlohy','date',v.date||this._data.today,'date','required') + '<div class="form-grid">' + field('Splniť načas do','due',v.due||'19:45','time','required') + field('Uzavrieť úlohu o','cutoff',v.cutoff||'22:00','time','required') + field('Body načas','points',v.points==null?1:v.points,'number','min="0" max="10000" required') + '</div><details><summary>Rozšírené nastavenia</summary><div class="form-grid">' + field('Body po termíne','late_points',v.late_points||0,'number','min="0" required') + field('Postih za nesplnenie','penalty',v.penalty||0,'number','min="0" required') + field('Rutina / skupina','group',v.group||'') + '</div>' + check('Vyžaduje schválenie rodičom','approval',!!v.approval) + check('Spoločnú odmenu rozdeliť medzi účastníkov','split',!!v.split) + check('Úloha je aktívna','active',v.active!==false) + '</details><p class="hint">Pri „Kto prvý“ ostatní nedostávajú postih. Spoločné delenie: zvyšné celé body idú podľa poradia profilov. Dnešná rozpracovaná úloha si zachová pôvodné pravidlá; úprava sa prejaví v ďalšom výskyte. Bez aktivity sa upraví aj dnes.</p>';
+        body=field('Názov','name',v.name||'','text','required maxlength="100"') + field('Ikona (emoji)','icon',v.icon||'✓','text','required maxlength="16"') + select('Spôsob plnenia','mode',v.mode||'independent',modes) + check('Všetci aktívni účastníci','everyone',v.everyone!==false) + '<div class="checks">' + this._data.people.map(p=>check(p.name,'people',(v.people||[]).indexOf(p.id)>=0,p.id)).join('') + '</div><small>Výber jednotlivcov platí po vypnutí „Všetci“.</small>' + select('Opakovanie','frequency',v.frequency||'daily',{daily:'Vybrané dni v týždni',repeat:'Viackrát za deň',weekend:'Raz za víkend (piatok – nedeľa)',weekly:'Raz za týždeň (ľubovoľný deň)',once:'Dlhodobá / jednorazová do dátumu',ongoing:'Bez termínu (jednorazovo)'}) + '<div class="checks">' + days.map((d,i)=>check(d,'days',(v.days||[0,1,2,3,4,5,6]).indexOf(i)>=0,i)).join('') + '</div>' + '<p class="hint">Víkend: jedna úloha od piatka do nedele; termín a uzávierka platia v nedeľu. Ďalší piatok vznikne nová. Výber dní platí len pre denné úlohy. Týždenná úloha trvá od pondelka do nedele, bez oneskorených bodov. Bez termínu zostáva otvorená do splnenia, bez postihu. Dátum a časy pri dlhodobej úlohe určujú jej koniec; dostupná je ihneď.</p>' + '<details><summary>Viackrát za deň – nastavenia</summary><p class="hint">Plnenie počas celého dňa vo vybrané dni. Body za každé splnenie; iba Každý samostatne alebo Na striedačku. Denné časy sa ignorujú. Postih sa vyhodnotí raz po polnoci, iba ak nie je splnený cieľ.</p>' + field('Denný limit (0 = bez limitu)','repeat_limit',v.repeat_limit==null?4:v.repeat_limit,'number','min="0" max="100"') + field('Denný cieľ (0 = dobrovoľná úloha)','repeat_goal',v.repeat_goal||0,'number','min="0" max="100"') + field('Odstup splnení v minútach','repeat_gap',v.repeat_gap==null?5:v.repeat_gap,'number','min="0" max="1440"') + '</details>' + field('Konečný dátum dlhodobej úlohy','date',v.date||this._data.today,'date','required') + '<div class="form-grid">' + field('Splniť načas do','due',v.due||'19:45','time','required') + field('Uzavrieť úlohu o','cutoff',v.cutoff||'22:00','time','required') + field('Body načas','points',v.points==null?1:v.points,'number','min="0" max="10000" required') + '</div><details><summary>Rozšírené nastavenia</summary><div class="form-grid">' + field('Body po termíne','late_points',v.late_points||0,'number','min="0" required') + field('Postih za nesplnenie','penalty',v.penalty||0,'number','min="0" required') + field('Rutina / skupina','group',v.group||'') + '</div>' + check('Vyžaduje schválenie rodičom','approval',!!v.approval) + check('Spoločnú odmenu rozdeliť medzi účastníkov','split',!!v.split) + check('Úloha je aktívna','active',v.active!==false) + '</details><p class="hint">Pri „Kto prvý“ ostatní nedostávajú postih. Spoločné delenie: zvyšné celé body idú podľa poradia profilov. Dnešná rozpracovaná úloha si zachová pôvodné pravidlá; úprava sa prejaví v ďalšom výskyte. Bez aktivity sa upraví aj dnes.</p>';
       } else if(type==='reward') {
         title=v.id?'Upraviť odmenu':'Nová odmena';
         var tasks={"":"Vyber úlohu"}; this._data.tasks.forEach(t=>{tasks[t.id]=t.name;});
@@ -374,6 +382,7 @@
       if(a==='reverse-adjustment') {this.act('reverse_adjustment',{entry:d.id});return;}
       if(a==='reward') {this.act('request_reward',{person:d.pid,reward:d.id});return;}
       if(a==='goal') {this.act('set_goal',{person:d.pid,reward:p.goal===d.id?'':d.id});return;}
+      if(a==='return-reward') {if(window.confirm('Zrušiť potvrdenú odmenu a vrátiť zaplatené body? Pri spoločnej odmene dostane každý späť svoj podiel.'))this.act('return_reward',{request:d.id});return;}
       if(a==='decide') {this.act('decide_reward',{request:d.id,decision:d.decision});}
     }
     render() {
@@ -391,7 +400,7 @@
         html+=this.header(p,admin);
         html+=this._editor?this.editor():(admin?this.admin(p):this._config.mode==='stats'?this.statistics(p):this.child(p));
       }
-      html+='<footer>Rodinné úlohy · 0.5.0</footer></div>';
+      html+='<footer>Rodinné úlohy · 0.6.0</footer></div>';
       this.shadowRoot.innerHTML='<style>'+FamilyQuestsCard.styles+'</style><ha-card>'+html+'</ha-card>';
       if(this._busy)this.shadowRoot.querySelectorAll('button').forEach(b=>{b.disabled=true;});
     }

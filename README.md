@@ -12,13 +12,18 @@ Bez závislosti od ChoreOps, ďalšieho servera alebo platenej služby.
 
 **[Inštalácia a aktualizácie](docs/INSTALACIA.md)** · **[Podrobný návod](docs/POUZIVANIE.md)** · **[Príklady kariet](examples)** · **[História verzií](CHANGELOG.md)**
 
+## Nové v 0.6.0
+
+Víkendové úlohy, vrátenie potvrdenej odmeny, upozornenia na schválenie a rodičovské
+tlačidlá priamo na detskej karte. [Nastavenie a príklady](docs/POUZIVANIE.md).
+
 ## Čo dokáže
 
 | Pre deti | Pre rodičov |
 | --- | --- |
 | Splnenie úlohy jedným kliknutím | Správa úloh a odmien cez formuláre |
 | Vlastná karta, fotografia a symbol bodov | Bonusy, mínusové body a presné vrátenie |
-| Denné, týždenné aj dlhodobé úlohy | Termín, uzávierka a ospravedlnenie |
+| Denné, víkendové, týždenné aj dlhodobé úlohy | Termín, uzávierka a ospravedlnenie |
 | Spoločné zbieranie na odmenu | Schválenie plných bodov aj po termíne |
 | Voliteľné štatistiky a cieľ odmeny | Týždenné vyhodnotenie a poradie skupín |
 

@@ -84,6 +84,15 @@ const data={version:1,admin:true,today,now:new Date().toISOString(),people:[{id:
  card.setConfig({mode:'admin'});click('edit-reward');assert(card.shadowRoot.innerHTML.includes('Spoločná odmena – účastníci sa skladajú bodmi'));
  await card.submit({preventDefault(){},target:{name:'Výlet',icon:'🎁',kind:'points',cost:'10',active:'yes',shared:'yes'}});assert.equal(calls.at(-1).data.shared,true);
 
+ card._editor=null;card._data=structuredClone(data);card.setConfig({mode:'child',person:'Maty'});card._tab='today';
+ const weekend=structuredClone(sample);weekend.task.frequency='weekend';weekend.task.due='19:00';weekend.members.a={submitted:new Date().toISOString(),confirmed:false,award:null,exempt:false};
+ card._data.occurrences=[weekend];card.render();
+ assert(card.shadowRoot.innerHTML.includes('Víkend · do nedele 19:00'));
+ assert(card.shadowRoot.innerHTML.includes('data-action="approve"'));assert(card.shadowRoot.innerHTML.includes('data-action="approve_full"'));
+ card._data.admin=false;card.render();assert(!card.shadowRoot.innerHTML.includes('data-action="approve"'));assert(!card.shadowRoot.innerHTML.includes('data-action="approve_full"'));
+ card._data.admin=true;card.setConfig({mode:'admin'});card._tab='rewards';
+ card._data.requests=[{id:'approved1',person:'a',status:'approved',at:new Date().toISOString(),reward:{name:'Kniha',cost:3}}];card.render();
+ assert(card.shadowRoot.innerHTML.includes('Vrátiť odmenu'));click('return-reward',{id:'approved1'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'return_reward');
  const offline=new Registered();offline.setConfig({mode:'child'});offline._hass={callWS:async()=>{throw Error('Offline');}};await offline.refresh();offline.click({target:{closest(){return {disabled:false,dataset:{action:'refresh'}};}}});
  await new Promise(resolve=>setImmediate(resolve));assert(offline.shadowRoot.innerHTML.includes('Offline'));
  console.log('PASS: card render/navigation, symbol submission, task form numeric conversion, admin gate, escaping and refresh before data. DOM substitute only.');

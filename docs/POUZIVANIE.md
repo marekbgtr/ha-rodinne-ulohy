@@ -31,6 +31,53 @@ symbolu znamená 1 bod. Rozdelenie nemusí byť rovnaké a celú cenu môže zap
 - V štatistikách sa každý príspevok započíta do rezervovaných/využitých bodov daného
   účastníka. Vrátenie príspevku zruší jeho účinok na hodnotenie.
 
+## Od verzie 0.6.0
+
+### Školské dni a víkend
+
+Vytvorte dve úlohy s rovnakými účastníkmi a režimom Každý samostatne:
+
+| Nastavenie | Školské úlohy | Školské úlohy – víkend |
+| --- | --- | --- |
+| Opakovanie | Vybrané dni v týždni | Raz za víkend (piatok – nedeľa) |
+| Dni | Po, Ut, St, Št | Výber dní sa nepoužíva |
+| Splniť načas do | 19:00 každý vybraný deň | 19:00 v nedeľu |
+| Uzavrieť úlohu o | napr. 22:00 | napr. 22:00 v nedeľu |
+| Body načas / po termíne / postih | 3 / 1 / 2 | napr. 3 / 1 / 2 |
+
+Postih zadávajte ako kladné číslo; automaticky sa odpočíta. Víkendovú úlohu stačí
+splniť raz. Od piatka 00:00 do nedeľného termínu sú plné body, potom znížené až po
+uzávierku. Úloha sa počas Po–Št nezobrazuje na detskej karte a ďalší piatok sa obnoví.
+Termín je vrátane nastavenej sekundy, pri uzávierke je už plnenie zatvorené.
+Všetky časy sú v časovom pásme HA. Po vytvorení v sobotu/nedeľu je dostupná ihneď.
+
+### Rozdelenie ceny a vrátenie odmeny
+
+Rodič → Odmeny → Upraviť → **Za body**, cena a **Spoločná odmena**. Deti si v karte
+Odmeny cez **Prispieť** zvolia vlastnú sumu: napríklad Maty 6 a Momo 4 z ceny 10.
+Môžu prispievať postupne; pomer nemusí byť rovnaký. Po nazbieraní ceny čaká odmena na rodiča.
+
+Omylom potvrdenú odmenu nájdete v **Rodič → Odmeny → Potvrdené odmeny → Vrátiť odmenu**.
+Po potvrdení sa odmena zruší a vrátia sa všetky zaplatené body, pri spoločnej odmene
+presne pôvodným prispievateľom. Opakovaný klik body nezdvojnásobí. Odmenu možno vyžiadať
+znova. Pri odmene viazanej na úlohu zostáva samotné splnenie úlohy zachované.
+Toto je zrušenie odmeny s refundáciou, nie návrat do čakajúceho schválenia.
+
+### Upozornenia a rodičovské tlačidlá
+
+HA automaticky zobrazí súhrn čakajúcich žiadostí o odmenu a úloh na schválenie v paneli
+upozornení. Po ich vybavení súhrn zmizne. Pre úlohy treba zapnúť **Vyžaduje schválenie rodičom**.
+Upozornenie HA môže vidieť aj používateľ spoločného tabletu; nejde o súkromnú mobilnú správu.
+
+Pre mobil vložte [túto automatizáciu](../examples/parent-notifications.yaml) a nahraďte
+`notify.mobile_app_tvoj_mobil` svojou akciou. Starú automatizáciu odmien nahraďte, aby sa
+správy nezdvojovali. Udalosti sa posielajú po úspešnom uložení; pri reštarte sa spätne
+neopakujú. Pri výpadku doručenia zostáva žiadosť v rodičovskom paneli.
+
+Ak detskú kartu otvorí **správca HA**, pri čakajúcej úlohe uvidí **Schváliť**, pri
+oneskorenej úlohe aj **Uznať za plné body**. Bežný detský účet tieto možnosti nemá.
+Pri opakovanej úlohe sú schválenia v rozbalení jednotlivých splnení.
+
 ## Od verzie 0.4.0
 
 Aktualizovať možno priamo z 0.1.0 alebo ktorejkoľvek medziverzie. Nahradia sa súbory
