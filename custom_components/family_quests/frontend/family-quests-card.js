@@ -1,4 +1,4 @@
-/* Rodinné úlohy 0.6.0 — dependency-free Lovelace card. */
+/* Rodinné úlohy 0.6.1 — dependency-free Lovelace card. */
 (function () {
   "use strict";
   var esc = function (v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
@@ -263,6 +263,8 @@
     settings() {
       var order=this._data.group_order || [];
       var html='<h4>Štatistiky na detskej karte</h4><p class="hint">Zapni ich iba tým účastníkom, ktorým chceš zobrazovať týždenné vyhodnotenie. Rodičovský prehľad zostáva dostupný.</p>'+this._data.people.map(p=>'<div class="task"><div class="grow"><b>'+esc(p.name)+'</b><small> · '+(p.show_statistics?'Sprístupnené':'Skryté')+'</small></div>'+button(p.show_statistics?'Skryť':'Sprístupniť','statistics-toggle',attr('pid',p.id),p.show_statistics?'quiet':'positive')+'</div>').join('');
+      var notifications=this._data.ha_notifications!==false;
+      html+='<h4>Upozornenia v HA</h4><p class="hint">Súhrn čakajúcich úloh a odmien v paneli upozornení. Mobilné automatizácie fungujú nezávisle.</p>'+button(notifications?'Vypnúť upozornenia v HA':'Zapnúť upozornenia v HA','notifications-toggle','',notifications?'quiet':'positive');
       html+='<h4>Poradie skupín úloh</h4><p class="hint">Poradie platí pre všetkých účastníkov. Úlohy vo vnútri skupiny sa radia podľa termínu. Nová skupina pribudne na koniec.</p>';
       html += order.map((g,i)=>'<div class="task"><div class="grow"><b>'+esc(g)+'</b></div>'+button('↑','group-move',attr('index',i)+' '+attr('step',-1)+(i===0?' disabled':'')+' aria-label="Posunúť vyššie"')+button('↓','group-move',attr('index',i)+' '+attr('step',1)+(i===order.length-1?' disabled':'')+' aria-label="Posunúť nižšie"')+'</div>').join('') || '<div class="empty">Skupinu vytvoríš vyplnením poľa Rutina / skupina pri úlohe.</div>';
       html += '<details class="maintenance"><summary>Prechod z testovania do ostrej prevádzky</summary><p class="hint">Vynuluje body a vymaže splnenia, históriu a žiadosti o odmeny celej domácnosti. Zachová profily, definície úloh a odmien aj poradie skupín. Obnoviť ich bude možné iba zo zálohy HA.</p>'+button('Pripraviť vymazanie testovania','reset-editor','','negative')+'</details>';
@@ -358,6 +360,7 @@
         var message=a==='unexempt'?'Zrušiť ospravedlnenie? Po uzávierke sa znovu vyhodnotí prípadný postih. Pri spoločnej úlohe sa vráti skupinová odmena.':'Uznať úlohu za plné body aj po termíne? Prípadný postih sa vráti. Pri spoločnom delení stále platia pravidlá spoločnej odmeny.';
         if(window.confirm(message))this.act(a,{occurrence:d.oid,person:d.pid,attempt:d.attempt});return;
       }
+      if(a==='notifications-toggle') {this.act('set_notifications',{enabled:this._data.ha_notifications===false});return;}
       if(a==='week') {this._week=Math.max(0,Math.min(7,(this._week||0)+Number(d.step)));this.render();return;}
       if(a==='group-move') {
         var order=(this._data.group_order||[]).slice(), index=Number(d.index), other=index+Number(d.step);
@@ -400,7 +403,7 @@
         html+=this.header(p,admin);
         html+=this._editor?this.editor():(admin?this.admin(p):this._config.mode==='stats'?this.statistics(p):this.child(p));
       }
-      html+='<footer>Rodinné úlohy · 0.6.0</footer></div>';
+      html+='<footer>Rodinné úlohy · 0.6.1</footer></div>';
       this.shadowRoot.innerHTML='<style>'+FamilyQuestsCard.styles+'</style><ha-card>'+html+'</ha-card>';
       if(this._busy)this.shadowRoot.querySelectorAll('button').forEach(b=>{b.disabled=true;});
     }

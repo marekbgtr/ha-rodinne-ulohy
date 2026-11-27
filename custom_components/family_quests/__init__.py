@@ -1,5 +1,6 @@
 """Rodinné úlohy: local integration and bundled dashboard card."""
 from datetime import timedelta
+from uuid import uuid4
 from pathlib import Path
 import logging
 import voluptuous as vol
@@ -7,6 +8,7 @@ from homeassistant.components import websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.const import Platform
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.service import async_register_admin_service
 from .const import DOMAIN
 from .controller import Controller
 from .engine import RuleError
@@ -21,6 +23,20 @@ async def async_setup(hass, config):
     ])
     websocket_api.async_register_command(hass, ws_get)
     websocket_api.async_register_command(hass, ws_action)
+    async def approve_notification(call):
+        controller = get_controller(hass)
+        await controller.transact(
+            action="approve_pending", data=dict(call.data), admin=True,
+            actor=call.context.user_id or "notification_automation",
+            request_id=uuid4().hex, expected_version=controller.engine.s["version"])
+
+    async_register_admin_service(hass, DOMAIN, "approve_notification", approve_notification,
+        schema=vol.Schema({
+            vol.Required("kind"): vol.In(["task", "reward"]),
+            vol.Optional("request"): str, vol.Optional("occurrence"): str,
+            vol.Optional("person"): str, vol.Optional("attempt"): str,
+            vol.Optional("submitted_at"): str,
+        }))
     return True
 
 

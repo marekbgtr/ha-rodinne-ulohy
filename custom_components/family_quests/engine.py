@@ -658,6 +658,26 @@ class Engine:
         require(not rid or (rid in self.s["rewards"] and self.s["rewards"][rid]["kind"] in ("points", "task_points")), "Vyber bodovú odmenu.")
         p["goal"] = rid
 
+    def set_notifications(self, args, now, actor):
+        self.s["ha_notifications"] = flag(args.get("enabled"), "Upozornenia v HA")
+
+    def approve_pending(self, args, now, actor):
+        if args["kind"] == "reward":
+            req = self.s["requests"].get(args.get("request"))
+            require(req is not None, "Žiadosť už neexistuje.")
+            if req["status"] == "approved":
+                return
+            require(req["status"] == "pending", "Odmena už nečaká na schválenie.")
+            self.decide_reward({"request": req["id"], "decision": "approve"}, now, actor)
+        else:
+            require(args["kind"] == "task", "Neplatný typ žiadosti.")
+            occ, member = self.occurrence(args["occurrence"], args["person"])
+            record = self.repeat_record(member, args) if occ["task"]["frequency"] == "repeat" else member
+            require(record.get("submitted") and record["submitted"] == args.get("submitted_at"),
+                    "Toto splnenie sa zmenilo. Otvor rodičovskú kartu.")
+            require(not member["exempt"], "Úloha je ospravedlnená.")
+            self.approve(args, now, actor)
+
     def set_group_order(self, args, now, actor):
         order = args.get("groups")
         require(isinstance(order, list) and len(order) <= 100, "Neplatné poradie skupín.")
@@ -782,7 +802,7 @@ class Engine:
         return result
 
     def apply(self, action, args, now, actor, admin):
-        allowed = PUBLIC_ACTIONS | {"return_reward", "unexempt", "approve_full", "set_statistics", "save_person", "save_task", "save_reward", "approve", "undo", "exempt", "adjust", "reverse_adjustment", "decide_reward", "set_group_order", "reset_progress"}
+        allowed = PUBLIC_ACTIONS | {"set_notifications", "approve_pending", "return_reward", "unexempt", "approve_full", "set_statistics", "save_person", "save_task", "save_reward", "approve", "undo", "exempt", "adjust", "reverse_adjustment", "decide_reward", "set_group_order", "reset_progress"}
         require(action in allowed, "Neznáma akcia.")
         require(admin or action in PUBLIC_ACTIONS, "Táto akcia je iba pre správcu Home Assistanta.")
         getattr(self, action)(args, now, actor)
@@ -817,6 +837,7 @@ class Engine:
         for occ in occurrences:
             occ["current"] = self.current(occ, now)
         return {"version": self.s["version"], "admin": admin,
+                "ha_notifications": self.s.get("ha_notifications", True),
                 "reward_links": {p: {r["id"]: self.reward_link(r, p, now) for r in self.s["rewards"].values() if r["kind"] != "points"} for p in self.s["people"]}, "today": today.isoformat(),
                 "now": now.isoformat(), "timezone": str(self.zone), "people": people,
                 "tasks": deepcopy(list(self.s["tasks"].values())) if admin else [],

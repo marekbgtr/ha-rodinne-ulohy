@@ -1,7 +1,7 @@
 {
   "domain": "family_quests",
   "name": "Rodinné úlohy",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "config_flow": true,
   "documentation": "https://github.com/marekbgtr/ha-rodinne-ulohy",
   "dependencies": [

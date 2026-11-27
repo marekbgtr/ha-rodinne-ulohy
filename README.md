@@ -12,6 +12,11 @@ Bez závislosti od ChoreOps, ďalšieho servera alebo platenej služby.
 
 **[Inštalácia a aktualizácie](docs/INSTALACIA.md)** · **[Podrobný návod](docs/POUZIVANIE.md)** · **[Príklady kariet](examples)** · **[História verzií](CHANGELOG.md)**
 
+## Nové v 0.6.1
+
+Prepínanie upozornení v HA, mobilné schválenie a otvorenie rodičovskej karty z notifikácie.
+[Nastavenie mobilu](docs/POUZIVANIE.md).
+
 ## Nové v 0.6.0
 
 Víkendové úlohy, vrátenie potvrdenej odmeny, upozornenia na schválenie a rodičovské

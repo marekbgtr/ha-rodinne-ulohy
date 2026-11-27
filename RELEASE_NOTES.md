@@ -1,19 +1,20 @@
-## Nové v 0.6.0
+## Nové v 0.6.1
 
-- **Raz za víkend:** jedna úloha od piatka do nedele. Termín aj uzávierka platia
-  v nedeľu; ďalší piatok vznikne nová úloha. Podporuje plné/neskoré body aj postih.
-- **Vrátiť odmenu:** Rodič → Odmeny → Potvrdené odmeny. Zruší potvrdenú odmenu
-  a vráti zaplatené body, pri spoločnej odmene každému presne jeho podiel.
-- **Upozornenia v HA:** súhrn čakajúcich úloh a odmien sa vytvorí automaticky,
-  aktualizuje pri zmenách a po vybavení zmizne.
-- **Mobilné upozornenia:** príklad `examples/parent-notifications.yaml` pre oba typy
-  žiadostí. Doplňte akciu svojho telefónu. Existujúce upozornenia na odmeny fungujú ďalej.
-- **Rodič na detskej karte:** správca HA vidí aj tlačidlá Schváliť a Uznať za plné body.
-  Bežný účet ich nevidí a server rodičovské operácie odmietne.
-- Spoločná bodová odmena naďalej podporuje ľubovoľné príspevky, napríklad 6 + 4 bodov.
+- Rodič → Nastavenia → Upozornenia v HA: zapnutie/vypnutie súhrnu čakajúcich žiadostí.
+  Vypnutie ihneď odstráni súhrn, zapnutie zobrazí stále čakajúce žiadosti.
+  Mobilné automatizácie zostávajú nezávislé.
+- Aktualizovaný príklad mobilnej automatizácie pridáva **Schváliť** a **Otvoriť rodičovskú kartu**.
+  Kliknutie na samotnú správu tiež otvorí rodičovský dashboard.
+- Nová administrátorská akcia `family_quests.approve_notification` overí konkrétnu
+  čakajúcu žiadosť. Staré upozornenie nemôže schváliť nové splnenie po vrátení úlohy.
 
-Pred aktualizáciou záloha HA. Aktualizovať cez HACS, reštart HA a obnovenie dashboardu.
-Existujúcu integráciu neodstraňujte. Dáta sa zachovávajú; staré harmonogramy sa nemenia.
+Po aktualizácii cez HACS reštartujte HA a obnovte dashboard. Pre mobil nahraďte starú
+notifikačnú automatizáciu súborom examples/parent-notifications.yaml a doplňte akciu
+mobilu a cestu rodičovského dashboardu. Samotná aktualizácia integrácie nemení automatizácie.
 
-Overenie: 129 Python testov, kontrola syntaxe a test logiky karty s náhradou DOM.
-Živý HA a fyzický tablet neboli pri vydávaní dostupné.
+Tlačidlo Schváliť platí počas behu automatizácie, najviac 24 hodín; reštart HA alebo
+znovunačítanie automatizácií čakanie zruší. Otvorenie karty zostáva dostupné.
+Schválenie úlohy zachová body podľa času splnenia; plné body navyše uznajte v karte.
+
+Overenie: 135 Python testov, test logiky karty, syntax Python/JavaScript a YAML.
+Živý HA a doručenie na fyzický mobil neboli dostupné na overenie.

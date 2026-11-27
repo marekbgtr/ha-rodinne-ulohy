@@ -122,6 +122,8 @@ class Controller:
         lines = [p["person_name"] + " – " + p["task_name"] for p in pending.values()]
         lines += ["Odmena: " + r["reward"]["name"] for r in self.engine.s["requests"].values() if r["status"] == "pending"]
         data = {"notification_id": "family_quests_" + self.entry.entry_id}
+        if not self.engine.s.get("ha_notifications", True):
+            lines = []
         if lines:
             data.update(title="Rodinné úlohy – čaká na rodiča", message="\n".join("- " + line for line in lines) + "\n\nOtvorte rodinný dashboard a vybavte žiadosti.")
         try:

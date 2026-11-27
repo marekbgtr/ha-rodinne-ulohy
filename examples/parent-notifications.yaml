@@ -1,6 +1,8 @@
-# Jedna automatizácia do editora YAML v HA.
-# Nahraď notify.mobile_app_tvoj_mobil akciou svojho mobilu.
-# Ak už máš starú automatizáciu odmien, nahraď ju touto (inak prídu dve správy).
+# Vyžaduje Rodinné úlohy >= 0.6.1 a HA Companion na rodičovskom mobile.
+# Nahraď notify.mobile_app_tvoj_mobil (na jednom mieste) a parent_path nižšie.
+# Nahraď pôvodnú automatizáciu; nespúšťaj obe súčasne.
+# Schválenie platí 24 hodín, do reštartu HA alebo znovunačítania automatizácií.
+# Potom stále funguje otvorenie rodičovskej karty.
 alias: Rodinné úlohy – upozornenia pre rodiča
 triggers:
   - trigger: event
@@ -11,15 +13,53 @@ triggers:
     id: task
 conditions: []
 actions:
+  - variables:
+      parent_path: /dashboard-rodina/rodic
+      approval_action: "{{ 'FAMILY_QUESTS_APPROVE_' ~ context.id }}"
+      request_data: "{{ trigger.event.data }}"
+      request_kind: "{{ trigger.id }}"
   - action: notify.mobile_app_tvoj_mobil
     data:
       title: >-
-        {{ 'Žiadosť o odmenu' if trigger.id == 'reward' else 'Úloha čaká na schválenie' }}
+        {{ 'Žiadosť o odmenu' if request_kind == 'reward' else 'Úloha čaká na schválenie' }}
       message: >-
-        {% if trigger.id == 'reward' %}
-          {{ trigger.event.data.person_name }} žiada o odmenu: {{ trigger.event.data.reward_name }}.
+        {% if request_kind == 'reward' %}
+          {{ request_data.person_name }} žiada o odmenu: {{ request_data.reward_name }}.
         {% else %}
-          {{ trigger.event.data.person_name }} dokončil(a): {{ trigger.event.data.task_name }}.
+          {{ request_data.person_name }} dokončil(a): {{ request_data.task_name }}.
         {% endif %}
-mode: queued
-max: 20
+      data:
+        tag: "{{ approval_action }}"
+        clickAction: "{{ parent_path }}"
+        url: "{{ parent_path }}"
+        actions:
+          - action: "{{ approval_action }}"
+            title: Schváliť
+            authenticationRequired: true
+          - action: URI
+            title: Otvoriť rodičovskú kartu
+            uri: "{{ parent_path }}"
+  - wait_for_trigger:
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: "{{ approval_action }}"
+    timeout: '24:00:00'
+    continue_on_timeout: false
+  - choose:
+      - conditions: "{{ request_kind == 'reward' }}"
+        sequence:
+          - action: family_quests.approve_notification
+            data:
+              kind: reward
+              request: "{{ request_data.request_id }}"
+    default:
+      - action: family_quests.approve_notification
+        data:
+          kind: task
+          occurrence: "{{ request_data.occurrence_id }}"
+          person: "{{ request_data.person_id }}"
+          attempt: "{{ request_data.attempt_id | default('') }}"
+          submitted_at: "{{ request_data.submitted_at }}"
+mode: parallel
+max: 100

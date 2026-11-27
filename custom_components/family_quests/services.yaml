@@ -1,0 +1,30 @@
+approve_notification:
+  name: Schváliť žiadosť z upozornenia
+  description: Schváli čakajúcu odmenu alebo konkrétne splnenie úlohy. Iba správca alebo automatizácia.
+  fields:
+    kind:
+      name: Typ žiadosti
+      required: true
+      selector:
+        select:
+          options: [task, reward]
+    request:
+      name: ID žiadosti o odmenu
+      selector:
+        text:
+    occurrence:
+      name: ID výskytu úlohy
+      selector:
+        text:
+    person:
+      name: ID účastníka
+      selector:
+        text:
+    attempt:
+      name: ID opakovaného splnenia
+      selector:
+        text:
+    submitted_at:
+      name: Pôvodný čas splnenia
+      selector:
+        text:

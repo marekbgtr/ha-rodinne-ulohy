@@ -31,6 +31,42 @@ symbolu znamená 1 bod. Rozdelenie nemusí byť rovnaké a celú cenu môže zap
 - V štatistikách sa každý príspevok započíta do rezervovaných/využitých bodov daného
   účastníka. Vrátenie príspevku zruší jeho účinok na hodnotenie.
 
+## Od verzie 0.6.1: nastavenie upozornení
+
+V **Rodič → Nastavenia → Upozornenia v HA** môžete súhrn vypnúť alebo zapnúť.
+Predvolene zostáva zapnutý. Vypnutie odstráni aktuálny súhrn; opätovné zapnutie
+zobrazí stále čakajúce úlohy a odmeny. Nastavenie prežije reštart a nemení mobilné upozornenia.
+
+### Schválenie priamo z mobilu
+
+Po aktualizácii na 0.6.1 a reštarte HA nahraďte doterajšiu automatizáciu
+[aktuálnym YAML](../examples/parent-notifications.yaml). Upravte tieto dve hodnoty:
+
+- `notify.mobile_app_tvoj_mobil`: notifikačná akcia rodičovského telefónu.
+- `parent_path`: cesta k záložke s rodičovskou kartou, napr. `/dashboard-rodina/rodic`.
+  Skopírujte skutočnú cestu z adresy pri otvorení svojej rodičovskej záložky.
+  Uvedená cesta je príklad, automaticky sa nevytvorí.
+
+Notifikácia má **Schváliť** a **Otvoriť rodičovskú kartu**. Aj kliknutie na správu otvorí
+rovnakú záložku (Android `clickAction`, iOS `url`). V aplikácii musíte byť prihlásení
+rodičovským účtom. Odkaz otvorí stránku dashboardu; nedokáže sám prepnúť vnútornú
+záložku vlastnej karty, preto odporúčame samostatnú stránku s `mode: admin`.
+
+Schválenie rozpozná konkrétnu žiadosť a nemení body podľa termínu: pri neskorom splnení
+zostanú neskoré body. Plné body uznajte v karte. Pri odmene sa rezervované body znova
+neodpočítajú. Staré oznámenie po zrušení/vrátení úlohy novú úlohu neschváli.
+
+Automatizácia čaká na odpoveď najviac 24 hodín a obsluhuje najviac 100 súbežných správ.
+Reštart HA alebo znovunačítanie automatizácií čakanie ukončí. Vtedy použite otvorenie
+karty; tlačidlo Schváliť v starej správe už nereaguje. Automatizáciu nemožno skúšať
+voľbou Spustiť bez udalosti — otestujte ju novou žiadosťou dieťaťa.
+Pri súbežnej zmene dát môže schválenie odmietnuť zastaraný stav; skontrolujte ho v karte.
+
+Tlačidlo vyžaduje odomknutie na podporovaných systémoch (Android 12+ / iOS).
+Automatizáciu smerujte iba na rodičovský telefón. Notifikácie neposielajte detskému
+telefónu, ak mu nechcete umožniť schvaľovanie. Nová akcia integrácie je registrovaná
+ako administrátorská; bežný účet ju nemôže volať priamo.
+
 ## Od verzie 0.6.0
 
 ### Školské dni a víkend

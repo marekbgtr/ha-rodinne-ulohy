@@ -93,6 +93,9 @@ const data={version:1,admin:true,today,now:new Date().toISOString(),people:[{id:
  card._data.admin=true;card.setConfig({mode:'admin'});card._tab='rewards';
  card._data.requests=[{id:'approved1',person:'a',status:'approved',at:new Date().toISOString(),reward:{name:'Kniha',cost:3}}];card.render();
  assert(card.shadowRoot.innerHTML.includes('Vrátiť odmenu'));click('return-reward',{id:'approved1'});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'return_reward');
+ card._editor=null;card._data=structuredClone(data);card.setConfig({mode:'admin'});card._tab='settings';card.render();
+ assert(card.shadowRoot.innerHTML.includes('Vypnúť upozornenia v HA'));click('notifications-toggle');await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.at(-1).action,'set_notifications');assert.equal(calls.at(-1).data.enabled,false);
+ card._data.ha_notifications=false;card.render();assert(card.shadowRoot.innerHTML.includes('Zapnúť upozornenia v HA'));
  const offline=new Registered();offline.setConfig({mode:'child'});offline._hass={callWS:async()=>{throw Error('Offline');}};await offline.refresh();offline.click({target:{closest(){return {disabled:false,dataset:{action:'refresh'}};}}});
  await new Promise(resolve=>setImmediate(resolve));assert(offline.shadowRoot.innerHTML.includes('Offline'));
  console.log('PASS: card render/navigation, symbol submission, task form numeric conversion, admin gate, escaping and refresh before data. DOM substitute only.');
